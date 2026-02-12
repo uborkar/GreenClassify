@@ -1,15 +1,16 @@
 """
-Convert Keras .h5 model to TensorFlow Lite format for Vercel deployment
+Convert Keras .h5 model to ONNX format for Vercel deployment
+ONNX Runtime is much lighter than TensorFlow (~50MB vs ~500MB)
 """
 import os
-import tensorflow as tf
+import sys
 
 # Paths
 h5_model_path = 'flask/vegetable_classification.h5'
-tflite_model_path = 'flask/vegetable_classification.tflite'
+onnx_model_path = 'flask/vegetable_classification.onnx'
 
 def convert_model():
-    """Convert Keras model to TensorFlow Lite"""
+    """Convert Keras model to ONNX"""
     
     # Check if .h5 model exists
     if not os.path.exists(h5_model_path):
@@ -19,56 +20,66 @@ def convert_model():
     
     print(f"📦 Loading Keras model from {h5_model_path}...")
     try:
+        import tensorflow as tf
         model = tf.keras.models.load_model(h5_model_path)
         print("✅ Model loaded successfully!")
     except Exception as e:
         print(f"❌ Error loading model: {e}")
         return False
     
-    print("\n🔄 Converting to TensorFlow Lite...")
+    print("\n🔄 Converting to ONNX format...")
     try:
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
+        import tf2onnx
         
-        # Optional: Optimize the model (makes it even smaller)
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        # Convert the model
+        spec = (tf.TensorSpec((None, 299, 299, 3), tf.float32, name="input"),)
+        output_path = onnx_model_path
         
-        tflite_model = converter.convert()
+        model_proto, _ = tf2onnx.convert.from_keras(
+            model,
+            input_signature=spec,
+            opset=13,
+            output_path=output_path
+        )
+        
         print("✅ Conversion successful!")
+    except ImportError:
+        print("❌ Error: tf2onnx not installed!")
+        print("\nPlease install it with:")
+        print("   pip install tf2onnx")
+        return False
     except Exception as e:
         print(f"❌ Error during conversion: {e}")
         return False
     
-    print(f"\n💾 Saving TFLite model to {tflite_model_path}...")
-    try:
-        with open(tflite_model_path, 'wb') as f:
-            f.write(tflite_model)
-        print("✅ TFLite model saved successfully!")
-    except Exception as e:
-        print(f"❌ Error saving model: {e}")
-        return False
-    
     # Show file sizes
     h5_size = os.path.getsize(h5_model_path) / (1024 * 1024)  # MB
-    tflite_size = os.path.getsize(tflite_model_path) / (1024 * 1024)  # MB
+    onnx_size = os.path.getsize(onnx_model_path) / (1024 * 1024)  # MB
     
     print("\n📊 Model Size Comparison:")
-    print(f"   Keras (.h5):        {h5_size:.2f} MB")
-    print(f"   TensorFlow Lite:    {tflite_size:.2f} MB")
-    print(f"   Size Reduction:     {((h5_size - tflite_size) / h5_size * 100):.1f}%")
+    print(f"   Keras (.h5):     {h5_size:.2f} MB")
+    print(f"   ONNX (.onnx):    {onnx_size:.2f} MB")
+    if onnx_size < h5_size:
+        print(f"   Size Reduction:  {((h5_size - onnx_size) / h5_size * 100):.1f}%")
     
     print("\n✨ All done! You can now deploy to Vercel.")
-    print("   Next steps:")
-    print("   1. git add flask/vegetable_classification.tflite")
-    print("   2. git commit -m 'Add TFLite model for deployment'")
+    print("\n📝 Next steps:")
+    print("   1. git add flask/vegetable_classification.onnx")
+    print("   2. git commit -m 'Add ONNX model for deployment'")
     print("   3. git push origin main")
+    print("\n💡 Tip: The .h5 file is ignored by git (too large)")
+    print("   Only the .onnx file will be deployed to Vercel")
     
     return True
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  Keras to TensorFlow Lite Converter")
-    print("  For Vercel Deployment")
+    print("  Keras to ONNX Converter")
+    print("  For Vercel Deployment (Lightweight)")
     print("=" * 60)
     print()
     
-    convert_model()
+    success = convert_model()
+    
+    if not success:
+        sys.exit(1)

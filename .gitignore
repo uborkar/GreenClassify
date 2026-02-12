@@ -45,7 +45,8 @@ instance/
 *.joblib
 *.pt
 *.pth
-*.onnx
+# Allow ONNX models for Vercel deployment (lightweight)
+!*.onnx
 *.pb
 # Allow TFLite models for Vercel deployment (they're small)
 !*.tflite
