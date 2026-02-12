@@ -7,27 +7,28 @@ app = Flask(__name__)
 
 # Model variables
 model = None
-onnx_session = None
+tflite_interpreter = None
 
 # Model paths
 model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.h5")
-onnx_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.onnx")
+tflite_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.tflite")
 
-# Try to load ONNX model first (for Vercel/production)
+# Try to load TFLite model first (for Vercel/production)
 try:
-    import onnxruntime as ort
-    if os.path.exists(onnx_model_path):
-        onnx_session = ort.InferenceSession(onnx_model_path)
-        print("✅ ONNX model loaded successfully!")
+    import tensorflow as tf
+    if os.path.exists(tflite_model_path):
+        tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
+        tflite_interpreter.allocate_tensors()
+        print("✅ TensorFlow Lite model loaded successfully!")
     else:
-        print(f"⚠️ ONNX model not found at {onnx_model_path}")
+        print(f"⚠️ TFLite model not found at {tflite_model_path}")
 except ImportError:
-    print("⚠️ ONNX Runtime not available, trying Keras...")
+    print("⚠️ TensorFlow Lite not available, trying Keras...")
 
-# Fall back to Keras if ONNX not available (for local development)
-if onnx_session is None:
+# Fall back to Keras if TFLite not available (for local development)
+if tflite_interpreter is None:
     try:
-        from keras.models import load_model
+        from tensorflow.keras.models import load_model
         if os.path.exists(model_path):
             model = load_model(model_path, compile=False)
             print("✅ Keras model loaded successfully!")
@@ -40,21 +41,23 @@ if onnx_session is None:
 def preprocess_image(img_path):
     """Preprocess image for model prediction"""
     img = Image.open(img_path).convert('RGB')
-    img = img.resize((299, 299))
+    img = img.resize((150, 150))  # Model was trained on 150x150
     img_arr = np.array(img, dtype=np.float32)
-    # Normalize if needed (depends on how model was trained)
-    # img_arr = img_arr / 255.0
+    # Normalize to [0, 1] range as done during training
+    img_arr = img_arr / 255.0
     img_arr = np.expand_dims(img_arr, axis=0)
     return img_arr
 
 def predict_with_model(img_input):
-    """Make prediction using available model (ONNX or Keras)"""
-    if onnx_session is not None:
-        # Use ONNX Runtime
-        input_name = onnx_session.get_inputs()[0].name
-        output_name = onnx_session.get_outputs()[0].name
-        result = onnx_session.run([output_name], {input_name: img_input})
-        return np.argmax(result[0])
+    """Make prediction using available model (TFLite or Keras)"""
+    if tflite_interpreter is not None:
+        # Use TensorFlow Lite
+        input_details = tflite_interpreter.get_input_details()
+        output_details = tflite_interpreter.get_output_details()
+        tflite_interpreter.set_tensor(input_details[0]['index'], img_input)
+        tflite_interpreter.invoke()
+        output_data = tflite_interpreter.get_tensor(output_details[0]['index'])
+        return np.argmax(output_data)
     elif model is not None:
         # Use Keras
         return np.argmax(model.predict(img_input, verbose=0))
@@ -101,7 +104,7 @@ def logout():
 def res():
     if request.method == "POST":
         # Check if model is loaded
-        if model is None and onnx_session is None:
+        if model is None and tflite_interpreter is None:
             return render_template('prediction.html', 
                 pred="⚠️ Model not loaded! Please upload a trained model.")
         
@@ -156,8 +159,8 @@ def health():
     """Health check endpoint for Vercel"""
     status = {
         'status': 'healthy',
-        'model_loaded': model is not None or onnx_session is not None,
-        'model_type': 'ONNX' if onnx_session else ('Keras' if model else 'None')
+        'model_loaded': model is not None or tflite_interpreter is not None,
+        'model_type': 'TFLite' if tflite_interpreter else ('Keras' if model else 'None')
     }
     return status
 
