@@ -47,7 +47,8 @@ instance/
 *.pth
 *.onnx
 *.pb
-*.tflite
+# Allow TFLite models for Vercel deployment (they're small)
+!*.tflite
 checkpoints/
 saved_models/
 models/

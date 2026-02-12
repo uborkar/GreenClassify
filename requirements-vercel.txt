@@ -12,5 +12,5 @@ werkzeug>=2.0.0,<4.0.0
 # TensorFlow Lite (much smaller than full TensorFlow)
 tflite-runtime>=2.14.0
 
-# Note: For local development with full features, use requirements-dev.txt
-# This file is optimized for Vercel's 250MB serverless function limit
+# Note: For local development, use requirements.txt
+# This file is optimized for Vercel's 250MB limit

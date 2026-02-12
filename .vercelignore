@@ -1,0 +1,26 @@
+# Exclude heavy files from Vercel deployment
+venv/
+env/
+.venv/
+flask/venv/
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
+.git/
+.gitignore
+*.md
+LICENSE
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+data/
+datasets/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
+*.log
