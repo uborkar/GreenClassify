@@ -1,12 +1,12 @@
 # Minimal requirements for Vercel deployment
 # Using ONNX Runtime (lightweight inference engine)
-# Python 3.11 specified in .python-version
+# Python 3.12 specified in .python-version
 
-numpy==1.24.3
-Pillow==10.0.0
-flask==3.0.0
-werkzeug==3.0.0
-onnxruntime==1.16.3
+numpy==1.26.4
+Pillow==10.3.0
+flask==3.0.3
+werkzeug==3.0.3
+onnxruntime==1.18.0
 
 # Note: You'll need to convert your .h5 model to .onnx format
 # See DEPLOYMENT.md for conversion instructions
