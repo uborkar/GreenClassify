@@ -13,19 +13,30 @@ tflite_interpreter = None
 model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.h5")
 tflite_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.tflite")
 
-# Try to load TFLite model first (for Vercel/production)
+# Try to load TFLite model using tflite_runtime (for Vercel/production)
 try:
-    import tensorflow as tf
-    if os.path.exists(tflite_model_path):
-        tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
-        tflite_interpreter.allocate_tensors()
-        print("✅ TensorFlow Lite model loaded successfully!")
-    else:
-        print(f"⚠️ TFLite model not found at {tflite_model_path}")
-except ImportError:
-    print("⚠️ TensorFlow Lite not available, trying Keras...")
+    # First try tflite_runtime (lightweight package for production)
+    try:
+        import tflite_runtime.interpreter as tflite
+        if os.path.exists(tflite_model_path):
+            tflite_interpreter = tflite.Interpreter(model_path=tflite_model_path)
+            tflite_interpreter.allocate_tensors()
+            print("✅ TensorFlow Lite model loaded successfully (tflite_runtime)!")
+        else:
+            print(f"⚠️ TFLite model not found at {tflite_model_path}")
+    except ImportError:
+        # Fallback to tensorflow.lite if tflite_runtime not available (local dev)
+        import tensorflow as tf
+        if os.path.exists(tflite_model_path):
+            tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
+            tflite_interpreter.allocate_tensors()
+            print("✅ TensorFlow Lite model loaded successfully (tensorflow)!")
+        else:
+            print(f"⚠️ TFLite model not found at {tflite_model_path}")
+except ImportError as e:
+    print(f"⚠️ TFLite not available: {e}")
 
-# Fall back to Keras if TFLite not available (for local development)
+# Fall back to Keras if TFLite not available (for local development only)
 if tflite_interpreter is None:
     try:
         from tensorflow.keras.models import load_model

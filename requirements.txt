@@ -1,11 +1,11 @@
 # Minimal requirements for Vercel deployment
-# Using TensorFlow Lite (lightweight)
+# Using TensorFlow Lite Runtime ONLY (ultra-lightweight ~10MB)
 
 numpy==1.26.4
 Pillow==10.3.0
 flask==3.0.3
 werkzeug==3.0.3
-tensorflow==2.18.0
+tflite-runtime==2.14.0
 
-# Note: TensorFlow includes TFLite runtime
-# This is optimized for Vercel's 250MB limit
+# Note: tflite-runtime is ~10MB vs tensorflow ~400MB
+# This ensures we stay under Vercel's 250MB limit
