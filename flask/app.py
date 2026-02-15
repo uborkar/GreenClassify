@@ -7,37 +7,28 @@ app = Flask(__name__)
 
 # Model variables
 model = None
-tflite_interpreter = None
+onnx_session = None
 
 # Model paths
 model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.h5")
-tflite_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.tflite")
+onnx_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.onnx")
 
-# Try to load TFLite model using tflite_runtime (for Vercel/production)
+# Try to load ONNX model (for Vercel/production - Python 3.12 compatible)
 try:
-    # First try tflite_runtime (lightweight package for production)
-    try:
-        import tflite_runtime.interpreter as tflite
-        if os.path.exists(tflite_model_path):
-            tflite_interpreter = tflite.Interpreter(model_path=tflite_model_path)
-            tflite_interpreter.allocate_tensors()
-            print("✅ TensorFlow Lite model loaded successfully (tflite_runtime)!")
-        else:
-            print(f"⚠️ TFLite model not found at {tflite_model_path}")
-    except ImportError:
-        # Fallback to tensorflow.lite if tflite_runtime not available (local dev)
-        import tensorflow as tf
-        if os.path.exists(tflite_model_path):
-            tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
-            tflite_interpreter.allocate_tensors()
-            print("✅ TensorFlow Lite model loaded successfully (tensorflow)!")
-        else:
-            print(f"⚠️ TFLite model not found at {tflite_model_path}")
+    import onnxruntime as ort
+    if os.path.exists(onnx_model_path):
+        onnx_session = ort.InferenceSession(onnx_model_path)
+        print("✅ ONNX model loaded successfully!")
+        print(f"   Input name: {onnx_session.get_inputs()[0].name}")
+        print(f"   Input shape: {onnx_session.get_inputs()[0].shape}")
+    else:
+        print(f"⚠️ ONNX model not found at {onnx_model_path}")
+        print("Please convert your model using: python convert_model.py")
 except ImportError as e:
-    print(f"⚠️ TFLite not available: {e}")
+    print(f"⚠️ ONNX Runtime not available: {e}")
 
-# Fall back to Keras if TFLite not available (for local development only)
-if tflite_interpreter is None:
+# Fall back to Keras if ONNX not available (for local development only)
+if onnx_session is None:
     try:
         from tensorflow.keras.models import load_model
         if os.path.exists(model_path):
@@ -60,15 +51,13 @@ def preprocess_image(img_path):
     return img_arr
 
 def predict_with_model(img_input):
-    """Make prediction using available model (TFLite or Keras)"""
-    if tflite_interpreter is not None:
-        # Use TensorFlow Lite
-        input_details = tflite_interpreter.get_input_details()
-        output_details = tflite_interpreter.get_output_details()
-        tflite_interpreter.set_tensor(input_details[0]['index'], img_input)
-        tflite_interpreter.invoke()
-        output_data = tflite_interpreter.get_tensor(output_details[0]['index'])
-        return np.argmax(output_data)
+    """Make prediction using available model (ONNX or Keras)"""
+    if onnx_session is not None:
+        # Use ONNX Runtime
+        input_name = onnx_session.get_inputs()[0].name
+        output_name = onnx_session.get_outputs()[0].name
+        result = onnx_session.run([output_name], {input_name: img_input})
+        return np.argmax(result[0])
     elif model is not None:
         # Use Keras
         return np.argmax(model.predict(img_input, verbose=0))
@@ -115,7 +104,7 @@ def logout():
 def res():
     if request.method == "POST":
         # Check if model is loaded
-        if model is None and tflite_interpreter is None:
+        if model is None and onnx_session is None:
             return render_template('prediction.html', 
                 pred="⚠️ Model not loaded! Please upload a trained model.")
         
@@ -170,8 +159,8 @@ def health():
     """Health check endpoint for Vercel"""
     status = {
         'status': 'healthy',
-        'model_loaded': model is not None or tflite_interpreter is not None,
-        'model_type': 'TFLite' if tflite_interpreter else ('Keras' if model else 'None')
+        'model_loaded': model is not None or onnx_session is not None,
+        'model_type': 'ONNX' if onnx_session else ('Keras' if model else 'None')
     }
     return status
 

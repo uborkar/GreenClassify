@@ -32,7 +32,8 @@ def convert_model():
         import tf2onnx
         
         # Convert the model
-        spec = (tf.TensorSpec((None, 299, 299, 3), tf.float32, name="input"),)
+        # Note: Input shape is (None, 150, 150, 3) - matching the preprocessing in app.py
+        spec = (tf.TensorSpec((None, 150, 150, 3), tf.float32, name="input"),)
         output_path = onnx_model_path
         
         model_proto, _ = tf2onnx.convert.from_keras(
