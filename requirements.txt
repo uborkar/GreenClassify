@@ -1,13 +1,12 @@
 # Minimal requirements for Vercel deployment
-# Using ONNX Runtime (lightweight ~50-80MB, supports Python 3.12)
+# Using TensorFlow Lite with tensorflow-cpu (lighter than full tensorflow)
 
 numpy==1.26.4
 Pillow==10.3.0
 flask==3.0.3
 werkzeug==3.0.3
-onnxruntime==1.17.0
-tf2onnx==1.16.1
+tensorflow-cpu==2.15.0
 
-# Note: onnxruntime is ~50-80MB vs tensorflow ~400MB
-# This ensures we stay under Vercel's 250MB limit
-# tf2onnx is needed to convert the model (can be in dev requirements later)
+# Note: tensorflow-cpu is ~200MB vs full tensorflow ~400MB
+# Still under Vercel's 250MB limit
+# We'll use the .tflite model file for inference

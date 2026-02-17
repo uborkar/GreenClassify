@@ -12,7 +12,6 @@ notebooks/
 LICENSE
 *.h5
 *.hdf5
-*.tflite
 *.pkl
 *.pickle
 data/
