@@ -1,12 +1,11 @@
-# Minimal requirements for Vercel deployment
-# Using TensorFlow 2.18.0 (supports Python 3.12)
+# Ultra-minimal requirements for Vercel deployment
+# Using external model hosting to avoid 250MB limit
 
 numpy==1.26.4
 Pillow==10.3.0
 flask==3.0.3
 werkzeug==3.0.3
-tensorflow==2.18.0
+requests==2.31.0
 
-# Note: tensorflow 2.18.0 is ~250MB but includes TFLite support
-# We'll use the .tflite model file for inference (11 MB)
-# Total should be just under 250MB limit
+# Total: ~25 MB - well under 250 MB limit!
+# Model will be downloaded from GitHub LFS at startup

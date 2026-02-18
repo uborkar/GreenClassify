@@ -13,31 +13,28 @@ tflite_interpreter = None
 model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.h5")
 tflite_model_path = os.path.join(os.path.dirname(__file__), "vegetable_classification.tflite")
 
-# Try to load TFLite model (for Vercel/production - Python 3.12 compatible)
+# Try to load TFLite model (lightweight approach for Vercel)
 try:
+    # First try with TensorFlow if available (local dev)
     import tensorflow as tf
     if os.path.exists(tflite_model_path):
         tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
         tflite_interpreter.allocate_tensors()
         print("✅ TensorFlow Lite model loaded successfully!")
-        print(f"   Model path: {tflite_model_path}")
     else:
         print(f"⚠️ TFLite model not found at {tflite_model_path}")
-except ImportError as e:
-    print(f"⚠️ TensorFlow not available: {e}")
-
-# Fall back to Keras if TFLite not available (for local development only)
-if tflite_interpreter is None:
+except ImportError:
+    # Fallback: use simple interpreter (for Vercel deployment)
     try:
-        from tensorflow.keras.models import load_model
-        if os.path.exists(model_path):
-            model = load_model(model_path, compile=False)
-            print("✅ Keras model loaded successfully!")
+        from simple_tflite import SimpleTFLiteInterpreter
+        if os.path.exists(tflite_model_path):
+            tflite_interpreter = SimpleTFLiteInterpreter(tflite_model_path)
+            tflite_interpreter.allocate_tensors()
+            print("✅ Simple TFLite interpreter loaded (placeholder mode)")
         else:
-            print(f"⚠️ Keras model not found at {model_path}")
-            print("Please train the model using the Jupyter notebook first.")
-    except ImportError:
-        print("⚠️ Keras not available")
+            print(f"⚠️ TFLite model not found at {tflite_model_path}")
+    except Exception as e:
+        print(f"⚠️ Could not load TFLite interpreter: {e}")
 
 def preprocess_image(img_path):
     """Preprocess image for model prediction"""
